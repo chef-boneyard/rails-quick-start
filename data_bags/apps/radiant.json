@@ -1,16 +1,12 @@
 {
   "id": "radiant",
   "server_roles": [
-    "radiant",
-    "radiant_utility"
+    "radiant"
   ],
   "type": {
     "radiant": [
       "rails",
       "unicorn"
-    ],
-    "radiant_utility": [
-      "rails"
     ]
   },
   "packages": {
