@@ -1,0 +1,63 @@
+{
+  "id": "radiant",
+  "server_roles": [
+    "radiant",
+    "radiant_utility"
+  ],
+  "type": {
+    "radiant": [
+      "rails",
+      "unicorn"
+    ],
+    "radiant_utility": [
+      "rails"
+    ]
+  },
+  "packages": {
+    "libxml2-dev": "",
+    "libxslt1-dev": "",
+    "libsqlite3-dev": ""
+  },
+  "gems": {
+    "rails": "2.3.10",
+    "will_paginate": "2.3.11",
+    "RedCloth": "4.2.3"
+  },
+  "database_master_role": [
+    "radiant_database_master"
+  ],
+  "mysql_root_password": {
+    "production": "mysql_root"
+  },
+  "mysql_debian_password": {
+    "production": "mysql_debian"
+  },
+  "mysql_repl_password": {
+    "production": "mysql_repl"
+  },
+  "migration_command": "rake db:migrate",
+  "databases": {
+    "production": {
+      "reconnect": "true",
+      "encoding": "utf8",
+      "username": "radiant",
+      "adapter": "mysql",
+      "database": "radiant_production",
+      "password": "awesome_password"
+    }
+  },
+  "repository": "git://github.com/radiant/radiant.git",
+  "revision": {
+    "production": "0.9.1"
+  },
+  "deploy_to": "/srv/radiant",
+  "deploy_key": "",
+  "owner": "nobody",
+  "group": "nogroup",
+  "force": {
+    "production": false
+  },
+  "migrate": {
+    "production": true
+  }
+}
