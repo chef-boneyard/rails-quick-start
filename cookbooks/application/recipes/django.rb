@@ -1,8 +1,8 @@
 #
 # Cookbook Name:: application
-# Recipe:: rails
+# Recipe:: wsgi
 #
-# Copyright 2009, Opscode, Inc.
+# Copyright 2011, Opscode, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,45 +19,20 @@
 
 app = node.run_state[:current_app]
 
+include_recipe "python"
+
 ###
 # You really most likely don't want to run this recipe from here - let the
 # default application recipe work it's mojo for you.
 ###
 
-# Are we using REE?
-use_ree = false
-if node.run_state[:seen_recipes].has_key?("ruby_enterprise")
-  use_ree = true
-end
-
 node.default[:apps][app['id']][node.app_environment][:run_migrations] = false
 
-## First, install any application specific packages
-if app['packages']
-  app['packages'].each do |pkg,ver|
-    package pkg do
-      action :install
-      version ver if ver && ver.length > 0
-    end
-  end
-end
+# the Django split-settings file name varies from project to project...+1 for standardization
+local_settings_full_path = app['local_settings_file'] || 'settings_local.py'
+local_settings_file_name = local_settings_full_path.split(/[\\\/]/).last
 
-## Next, install any application specific gems
-if app['gems']
-  app['gems'].each do |gem,ver|
-    if use_ree
-      ree_gem gem do
-        action :install
-        version ver if ver && ver.length > 0
-      end
-    else
-      gem_package gem do
-        action :install
-        version ver if ver && ver.length > 0
-      end
-    end
-  end
-end
+## Create required directories
 
 directory app['deploy_to'] do
   owner app['owner']
@@ -73,15 +48,31 @@ directory "#{app['deploy_to']}/shared" do
   recursive true
 end
 
-%w{ log pids system vendor_bundle }.each do |dir|
+## Create a virtualenv for the app
+ve = python_virtualenv app['id'] do
+  path "#{app['deploy_to']}/shared/env"
+  action :create
+end
 
-  directory "#{app['deploy_to']}/shared/#{dir}" do
-    owner app['owner']
-    group app['group']
-    mode '0755'
-    recursive true
+## First, install any application specific packages
+if app['packages']
+  app['packages'].each do |pkg,ver|
+    package pkg do
+      action :install
+      version ver if ver && ver.length > 0
+    end
   end
+end
 
+## Next, install any application specific gems
+if app['pips']
+  app['pips'].each do |pip,ver|
+    python_pip pip do
+      version ver if ver && ver.length > 0
+      virtualenv ve.path
+      action :install
+    end
+  end
 end
 
 if app.has_key?("deploy_key")
@@ -122,40 +113,29 @@ if app["database_master_role"]
       dbm = rows[0]
     end
   end
+  
+  # we need the django version to render the correct type of settings.py file
+  django_version = 1.2
+  if app['pips'].has_key?('django') && !app['pips']['django'].strip.empty?
+    django_version = app['pips']['django'].to_f
+  end
 
   # Assuming we have one...
   if dbm
-    template "#{app['deploy_to']}/shared/database.yml" do
-      source "database.yml.erb"
+    # local_settings.py
+    template "#{app['deploy_to']}/shared/#{local_settings_file_name}" do
+      source "settings.py.erb"
       owner app["owner"]
       group app["group"]
       mode "644"
       variables(
         :host => dbm['fqdn'],
-        :databases => app['databases']
+        :database => app['databases'][node.app_environment],
+        :django_version => django_version
       )
     end
   else
-    Chef::Log.warn("No node with role #{app["database_master_role"][0]}, database.yml not rendered!")
-  end
-end
-
-if app["memcached_role"]
-  results = search(:node, "role:#{app["memcached_role"][0]} AND app_environment:#{node[:app_environment]} NOT hostname:#{node[:hostname]}")
-  if results.length == 0
-    if node.run_list.roles.include?(app["memcached_role"][0])
-      results << node
-    end
-  end
-  template "#{app['deploy_to']}/shared/memcached.yml" do
-    source "memcached.yml.erb"
-    owner app["owner"]
-    group app["group"]
-    mode "644"
-    variables(
-      :memcached_envs => app['memcached'],
-      :hosts => results.sort_by { |r| r.name }
-    )
+    Chef::Log.warn("No node with role #{app["database_master_role"][0]}, #{local_settings_file_name} not rendered!")
   end
 end
 
@@ -166,34 +146,23 @@ deploy_revision app['id'] do
   user app['owner']
   group app['group']
   deploy_to app['deploy_to']
-  environment 'RAILS_ENV' => node.app_environment
   action app['force'][node.app_environment] ? :force_deploy : :deploy
   ssh_wrapper "#{app['deploy_to']}/deploy-ssh-wrapper" if app['deploy_key']
-
+  purge_before_symlink([])
+  create_dirs_before_symlink([])
+  symlinks({})
   before_migrate do
-    if app['gems'].has_key?('bundler')
-      link "#{release_path}/vendor/bundle" do
-        to "#{app['deploy_to']}/shared/vendor_bundle"
-      end
-      common_groups = %w{development test cucumber staging production}
-      execute "bundle install --deployment --without #{(common_groups -([node.app_environment])).join(' ')}" do
-        ignore_failure true
-        cwd release_path
-      end
-    elsif app['gems'].has_key?('bundler08')
-      execute "gem bundle" do
-        ignore_failure true
-        cwd release_path
-      end
-
-    elsif node.app_environment && app['databases'].has_key?(node.app_environment)
-      # chef runs before_migrate, then symlink_before_migrate symlinks, then migrations,
-      # yet our before_migrate needs database.yml to exist (and must complete before
-      # migrations).
-      #
-      # maybe worth doing run_symlinks_before_migrate before before_migrate callbacks,
-      # or an add'l callback.
-      execute "(ln -s ../../../shared/database.yml config/database.yml && rake gems:install); rm config/database.yml" do
+    requirements_file = nil
+    # look for requirements.txt files in common locations
+    if ::File.exists?(::File.join(release_path, "requirements", "#{node[:app_environment]}.txt"))
+      requirements_file = ::File.join(release_path, "requirements", "#{node[:app_environment]}.txt")
+    elsif ::File.exists?(::File.join(release_path, "requirements.txt"))
+      requirements_file = ::File.join(release_path, "requirements.txt")
+    end
+    
+    if requirements_file
+      Chef::Log.info("Installing pips using requirements file: #{requirements_file}")
+      execute "pip install -E #{ve.path} -r #{requirements_file}" do
         ignore_failure true
         cwd release_path
       end
@@ -201,13 +170,12 @@ deploy_revision app['id'] do
   end
 
   symlink_before_migrate({
-    "database.yml" => "config/database.yml",
-    "memcached.yml" => "config/memcached.yml"
+    local_settings_file_name => local_settings_full_path
   })
 
   if app['migrate'][node.app_environment] && node[:apps][app['id']][node.app_environment][:run_migrations]
     migrate true
-    migration_command app['migration_command'] || "rake db:migrate"
+    migration_command app['migration_command'] || "#{::File.join(ve.path, "bin", "python")} manage.py migrate"
   else
     migrate false
   end

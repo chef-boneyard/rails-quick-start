@@ -1,8 +1,8 @@
 #
 # Cookbook Name:: application
-# Recipe:: unicorn 
+# Recipe:: gunicorn 
 #
-# Copyright 2009, Opscode, Inc.
+# Copyright 2011, Opscode, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,29 +19,30 @@
 
 app = node.run_state[:current_app] 
 
-include_recipe "unicorn"
+ve = resources(:python_virtualenv => app['id'])
+node.default[:gunicorn][:virtualenv] = ve.path
 
-node.default[:unicorn][:worker_timeout] = 60
-node.default[:unicorn][:preload_app] = false
-node.default[:unicorn][:worker_processes] = [node[:cpu][:total].to_i * 4, 8].min
-node.default[:unicorn][:preload_app] = false
-node.default[:unicorn][:before_fork] = 'sleep 1' 
-node.default[:unicorn][:port] = '8080'
-node.set[:unicorn][:options] = { :tcp_nodelay => true, :backlog => 100 }
+include_recipe "gunicorn"
 
-unicorn_config "/etc/unicorn/#{app['id']}.rb" do
-  listen({ node[:unicorn][:port] => node[:unicorn][:options] })
-  working_directory ::File.join(app['deploy_to'], 'current')
-  worker_timeout node[:unicorn][:worker_timeout] 
-  preload_app node[:unicorn][:preload_app] 
-  worker_processes node[:unicorn][:worker_processes]
-  before_fork node[:unicorn][:before_fork] 
+node.default[:gunicorn][:worker_timeout] = 60
+node.default[:gunicorn][:preload_app] = false
+node.default[:gunicorn][:worker_processes] = [node[:cpu][:total].to_i * 4, 8].min
+node.default[:gunicorn][:server_hooks] = {:pre_fork => 'import time;time.sleep(1)'}
+node.default[:gunicorn][:port] = '8080'
+
+gunicorn_config "/etc/gunicorn/#{app['id']}.py" do
+  listen "#{node[:ipaddress]}:#{node[:gunicorn][:port]}"
+  worker_timeout node[:gunicorn][:worker_timeout] 
+  preload_app node[:gunicorn][:preload_app] 
+  worker_processes node[:gunicorn][:worker_processes]
+  server_hooks node[:gunicorn][:server_hooks]
+  action :create
 end
-
+ 
 runit_service app['id'] do
-  template_name 'unicorn'
+  template_name 'gunicorn'
   cookbook 'application'
-  options(:app => app)
+  options('app' => app, 'virtualenv' => ve.path)
   run_restart false
 end
 
