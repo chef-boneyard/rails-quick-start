@@ -37,9 +37,9 @@ Obtain the repository used for this guide. It contains all the components requir
 
     sudo apt-get install libxml2-dev libxslt-dev
 
-*All Users*: You'll need some additional gems for Knife
+*All Users*: You'll need some additional gems for Knife to launch instances in Amazon EC2:
 
-    sudo gem install knife-ec2 fog net-ssh-multi
+    sudo gem install knife-ec2
 
 As part of the [Getting Started Guide](help.opscode.com/faqs/start/how-to-get-started), you cloned a chef-repo and copied the Knife configuration file (knife.rb), validation certificate (ORGNAME-validator.pem) and user certificate (USERNAME.pem) to **~/chef-repo/.chef/**. Copy these files to the new rails-quick-start repository. You can also re-download the Knife configuration file for your [Organization from the Management Console](http://help.opscode.com/faqs/start/user-environment).
 
