@@ -1,0 +1,83 @@
+<html>
+ <head>
+   <title><%= @title %> status</title>
+   <link media="all" type="text/css" href="http://manage.opscode.com/stylesheets/base.css" charset="utf-8" rel="Stylesheet" />
+   <link media="all" type="text/css" href="http://manage.opscode.com/stylesheets/themes/opscode/style.css" charset="utf-8" rel="Stylesheet" />
+   <link media="all" type="text/css" href="http://manage.opscode.com/stylesheets/chef.css" charset="utf-8" rel="Stylesheet" />
+   <style type="text/css">
+   .content .inner p {
+     font-size: 16px;
+   }
+   div#main {
+    width: 100%;
+   }
+   </style>
+ </head>
+ <body> 
+     <div id='container'>
+       <div id='header'>
+           <h1><img src="http://manage.opscode.com/images/logo.png" /> &nbsp; <span style="color:white"><%= @title %></span>
+           </h1>
+        </div>
+       <div id='wrapper'>
+         <div id='main'>
+           <div class='block' id='block-messages'>
+             <div class='content'>
+               <h2 class='title'>Now you're cooking with fire!</h2>
+               <div class='inner'>
+                <table style="border-spacing:20px">
+                  <tr><td><i><%= @app['id'] %></i>, the <%= @title %> demo application, can be found <a href="../">here</a>.</td></tr>
+                </table>
+               </div>
+             </div>
+           </div>
+           <div class='block' id='block-forms'>
+             <div class='content'>
+               <h2 class='title'>Server Details</h2>
+               <div class='inner'></div>
+             </div>
+             <div class='content'>
+               <div class='inner'>
+                  <table style="border-spacing:20px">
+                    <tr><td><b>Public IP Address:</b></td><td><%= node['cloud']['public_ipv4'] %></td></tr>
+                    <tr><td><b>Private IP Address:</b></td><td><%= node['cloud']['local_ipv4'] %></td></tr>
+                    <tr><td><b>FQDN:</b></td><td><%= node['fqdn'] %></td></tr>
+                    <tr><td><b>Public Hostname:</b></td><td><%= node['cloud']['public_hostname'] %></td></tr>
+                    <tr><td><b>Platform:</b></td><td><%= node['platform'] %> (<%= node['platform_version'] %>)</td></tr>
+                    <tr><td><b>Run List:</b></td><td><%= @run_list %></td></tr>
+                    <tr><td><b>Last Chef Run Time:</b></td><td><%= Time.at(node['ohai_time']) %></td></tr>
+                    <tr><td><b>Organization:</b></td><td><%= @organization %></td></tr>
+                  </table>
+               </div>
+             </div>
+           </div>
+<% if @users.any? -%>
+           <div class='block' id='block-forms'>
+              <div class='content'>
+                <h2 class='title'>Quick Start Created User</h2>
+                <div class='inner'></div>
+              </div>
+              <div class='content'>
+                <div class='inner'>
+                  <table style="border-spacing:20px">
+                  <% @users.each do |u| -%>
+                    <tr><td><b>Username: </b></td><td><%= u['username'] %></td></tr>
+                    <tr><td><b>SSH Public Key Fingerprint: </b></td><td><%= u['key_fingerprint'] %></td></tr>
+                  <% end -%>
+                  </table>
+                </div>
+              </div>
+            </div>
+<% end -%>
+           <div id='footer'>
+             <div class='block'>
+               <p>Copyright &copy; 2011 Opscode</p>
+             </div>
+           </div>
+         </div>
+         </div>
+         <div class='clear'></div> 
+       </div>
+     </div>
+   </body>
+</html>
