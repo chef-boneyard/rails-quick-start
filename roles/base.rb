@@ -4,5 +4,6 @@ run_list(
   "recipe[apt]",
   "recipe[git]",
   "recipe[build-essential]",
-  "recipe[ruby]"
+  "recipe[ruby]",
+  "recipe[users::sysadmins]"
 )

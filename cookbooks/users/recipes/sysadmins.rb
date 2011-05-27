@@ -19,6 +19,8 @@
 
 sysadmin_group = Array.new
 
+begin
+
 search(:users, 'groups:sysadmin') do |u|
   sysadmin_group << u['id']
 
@@ -66,4 +68,7 @@ end
 group "sysadmin" do
   gid 2300
   members sysadmin_group
+end
+
+rescue Net::HTTPServerException # in case the data bag doesn't exist
 end
