@@ -25,6 +25,7 @@ begin
     h = {}
     h['username'] = u['id']
     if u['ssh_keys']
+      # redundant since net-ssh is a dependency of chef...but you never know!
       gem_package "net-ssh" do
         action :nothing
       end.run_action(:install)
@@ -40,7 +41,7 @@ title = "Rails Quick Start"
 app = data_bag_item("apps", "radiant")
 organization = Chef::Config[:chef_server_url].split('/').last
 pretty_run_list = node.run_list.run_list_items.collect do |item|
-  "#{item.name} (#{item.role? ? "role" : "recipe" })"
+  "#{item.name} (#{item.type.to_s})"
 end.join(", ")
 
 template "#{::File.join(app['deploy_to'], "current")}/public/status.html" do
