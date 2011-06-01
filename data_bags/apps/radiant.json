@@ -23,17 +23,17 @@
     "radiant_database_master"
   ],
   "mysql_root_password": {
-    "production": "mysql_root"
+    "_default": "mysql_root"
   },
   "mysql_debian_password": {
-    "production": "mysql_debian"
+    "_default": "mysql_debian"
   },
   "mysql_repl_password": {
-    "production": "mysql_repl"
+    "_default": "mysql_repl"
   },
   "migration_command": "rake db:migrate",
   "databases": {
-    "production": {
+    "_default": {
       "reconnect": "true",
       "encoding": "utf8",
       "username": "radiant",
@@ -44,16 +44,16 @@
   },
   "repository": "git://github.com/radiant/radiant.git",
   "revision": {
-    "production": "0.9.1"
+    "_default": "0.9.1"
   },
   "deploy_to": "/srv/radiant",
   "deploy_key": "",
   "owner": "nobody",
   "group": "nogroup",
   "force": {
-    "production": false
+    "_default": false
   },
   "migrate": {
-    "production": true
+    "_default": true
   }
 }
