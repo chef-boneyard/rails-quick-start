@@ -36,8 +36,8 @@ app = data_bag_item("apps", "radiant")
 node.set[:radiant][:db_bootstrap] = <<EOS
 yes | rake #{node[:radiant][:environment]} db:bootstrap \
 ADMIN_NAME=Administrator \
-ADMIN_USERNAME=admin \
-ADMIN_PASSWORD=radiant \
+ADMIN_USERNAME=#{app['admin_username'] || 'admin'} \
+ADMIN_PASSWORD=#{app['admin_password'] || 'radiant'} \
 DATABASE_TEMPLATE=empty.yml
 EOS
 
