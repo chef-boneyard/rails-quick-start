@@ -1,4 +1,4 @@
-This guide describes how to build a Ruby On Rails application stack using Chef cookbooks available from the [Cookbooks Community Site](http://cookbooks.opscode.com) and the Opscode Platform. It assumes you followed the [Getting Started Guide](http://help.opscode.com/faqs/start/how-to-get-started) and have Chef installed.  
+This guide describes how to build a Ruby On Rails application stack using Chef cookbooks available from the [Cookbooks Community Site](http://cookbooks.opscode.com) and Hosted Chef. It assumes you followed the [Getting Started Guide](http://help.opscode.com/faqs/start/how-to-get-started) and have Chef installed.  
 
 *This guide uses Ubuntu 10.04 on Amazon AWS EC2 with Chef 0.10.0.*
 
@@ -104,7 +104,7 @@ The rails-quick-start has all the cookbooks we need for this guide. They were do
     radiant
     haproxy
 
-Upload all the cookbooks to the Opscode Platform.
+Upload all the cookbooks to Hosted Chef.
 
     knife cookbook upload -a
 
@@ -119,7 +119,7 @@ All the required roles have been created in the rails-quick-start repository. Th
     radiant_run_migrations.rb
     radiant_load_balancer.rb
 
-Upload all the roles to the Opscode Platform.
+Upload all the roles to Hosted Chef.
 
     rake roles
 
@@ -128,7 +128,7 @@ Data Bag Item
 
 The rails-quick-start repository contains a data bag item that has all the information required to deploy and configure the Radiant application from source using the recipes in the **application** and **database** cookbooks.
 
-The data bag name is **apps** and the item name is **radiant**. Upload this to the Opscode Platform.
+The data bag name is **apps** and the item name is **radiant**. Upload this to Hosted Chef.
 
     knife data bag create apps
     knife data bag from file apps radiant.json
@@ -143,7 +143,7 @@ In either case, we're going to use m1.small instances with the 32 bit Ubuntu 10.
 This command will:
 
 * Launch a server on EC2.
-* Connect it to the Opscode Platform.
+* Connect it to Hosted Chef.
 * Configure the system with Chef.
 
 See the appropriate section below for instruction on launching a single instance, or launching the multi-system infrastructure.
@@ -154,7 +154,7 @@ Launch Single Instance
 Launch the entire stack on a single instance.
 
     knife ec2 server create -G default -I ami-7000f019 -f m1.small \
-      -S rails-quick-start -i ~/.ssh/rails-quick-start.pem -x ubuntu \
+      -S rails-quick-start -i ~/.ssh/rails-quick-start.pem -x ubuntu -d ubuntu10.04-gems-qs \
       -r 'role[base],role[radiant_database_master],role[radiant],role[radiant_run_migrations],recipe[radiant::db_bootstrap],role[radiant_load_balancer]'
 
 Once complete, the instance will be running MySQL and Radiant under Unicorn. With only one system, a load balancer is unnecessary.
@@ -167,25 +167,25 @@ We will launch one database server, two application servers and one load balance
 First, launch the database instance.
 
     knife ec2 server create -G default -I ami-7000f019 -f m1.small \
-      -S rails-quick-start -i ~/.ssh/rails-quick-start.pem -x ubuntu \
+      -S rails-quick-start -i ~/.ssh/rails-quick-start.pem -x ubuntu -d ubuntu10.04-gems-qs \
       -r 'role[base],role[radiant_database_master]'
 
 Once the database master is up, launch one node that will run database migration and set up the database with default data.
 
     knife ec2 server create -G default -I ami-7000f019 -f m1.small \
-      -S rails-quick-start -i ~/.ssh/rails-quick-start.pem -x ubuntu \
+      -S rails-quick-start -i ~/.ssh/rails-quick-start.pem -x ubuntu -d ubuntu10.04-gems-qs \
       -r 'role[base],role[radiant],role[radiant_run_migrations],recipe[radiant::db_bootstrap]' 
 
 Launch the second application instance w/o the **radiant_run_migrations** role or **radiant::db_bootstrap** recipe.
 
     knife ec2 server create -G default -I ami-7000f019 -f m1.small \
-      -S rails-quick-start -i ~/.ssh/rails-quick-start.pem -x ubuntu \
+      -S rails-quick-start -i ~/.ssh/rails-quick-start.pem -x ubuntu -d ubuntu10.04-gems-qs \
       -r 'role[base],role[radiant]'
 
 Once the second application instance is up, launch the load balancer.
 
     knife ec2 server create -G default -I ami-7000f019 -f m1.small \
-      -S rails-quick-start -i ~/.ssh/rails-quick-start.pem -x ubuntu \
+      -S rails-quick-start -i ~/.ssh/rails-quick-start.pem -x ubuntu -d ubuntu10.04-gems-qs \
       -r 'role[base],role[radiant_load_balancer]'
 
 Once complete, we'll have four instances running in EC2 with MySQL, Radiant and haproxy up and available to serve traffic.
